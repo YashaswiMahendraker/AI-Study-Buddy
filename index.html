@@ -173,7 +173,52 @@
 
         // Initialize Firebase and Authenticate
         async function initializeAppAndAuth() {
+            // FIX: Bypass Firebase setup for GitHub Pages environment
             try {
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+                if (!firebaseConfig.apiKey) {
+                    // Fallback for environments where Firebase config is not provided (like GitHub Pages)
+                    isAuthReady = true;
+                    userId = crypto.randomUUID(); // Set a dummy ID
+                    document.getElementById('user-id-display').textContent = `User ID: ${userId} (Storage Disabled)`;
+                    console.warn("Firebase configuration missing. Running in AI-only mode (No preference saving).");
+                } else {
+                    // Original Firebase initialization path
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
+                            isAuthReady = true;
+                            loadExamPreference();
+                        } else {
+                            userId = crypto.randomUUID(); 
+                            document.getElementById('user-id-display').textContent = `Anonymous User ID: ${userId}`;
+                            isAuthReady = true;
+                        }
+                    });
+                }
+                
+                // Final UI activation for both paths
+                document.getElementById('app-loader').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("App initialization failed:", error);
+                document.getElementById('app-loader').innerHTML = '<p class="text-red-600">Fatal error during startup. Check console.</p>';
+            }
+        }
+
                 // setLogLevel('Debug'); // Uncomment for debugging
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
