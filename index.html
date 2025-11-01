@@ -151,7 +151,99 @@
         </div>
     </div>
 
-    <script type="module">
+  
+                const payload = {
+                    contents: [{ parts: [{ text: quizPrompt }] }],
+                };
+
+                const result = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!result.ok) {
+                    throw new Error(`API Error: ${result.status} ${result.statusText}`);
+                }
+
+                const data = await result.json();
+                const candidate = data.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const quizText = candidate.content.parts[0].text;
+                    displayQuiz(quizText);
+                } else {
+                    displayError("Could not generate the quiz. Please try again.");
+                }
+
+            } catch (error) {
+                console.error('Error generating quiz:', error);
+                displayError(`An error occurred while generating the quiz: ${error.message}`);
+            } finally {
+                quizLoader.classList.add('hidden');
+                quizButton.disabled = false;
+                quizButton.textContent = 'Generate Practice Quiz (5 MCQs)';
+            }
+        }
+
+
+        /**
+         * Displays the AI's explanation response in the UI.
+         */
+        function displayResponse(text, sources) {
+            // Basic formatting for the explanation area
+            let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')       
+                .replace(/### (.*?)\n/g, '<h3>$1</h3>')     
+                .replace(/## (.*?)\n/g, '<h2>$1</h2>')       
+                .replace(/# (.*?)\n/g, '<h1>$1</h1>')        
+                .replace(/^- (.*?)\n/gm, '<ul><li>$1</li></ul>') 
+                .replace(/^\d+\. (.*?)\n/gm, '<ol><li>$1</li></ol>') 
+                .replace(/<\/ul>\n<ul>/g, '') 
+                .replace(/<\/ol>\n<ol>/g, '') 
+                .replace(/\n/g, '<br>');                     
+
+            responseArea.innerHTML = formattedText;
+            responseContainer.classList.remove('hidden');
+
+            // Populate sources
+            if (sources.length > 0) {
+                sourcesList.innerHTML = '';
+                sources.forEach(source => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="hover:underline">${source.title}</a>`;
+                    sourcesList.appendChild(li);
+                });
+                sourcesContainer.classList.remove('hidden');
+            } else {
+                sourcesContainer.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Displays the generated quiz in the UI.
+         */
+        function displayQuiz(text) {
+             // Basic formatting for the quiz area to handle newlines as paragraphs/breaks
+             let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                .replace(/\n/g, '<br><br>');
+
+            quizArea.innerHTML = formattedText;
+            quizContainer.classList.remove('hidden');
+        }
+
+        /**
+         * Displays an error message in the UI.
+         */
+        function displayError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>  <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -465,96 +557,4 @@
                 const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-                const payload = {
-                    contents: [{ parts: [{ text: quizPrompt }] }],
-                };
-
-                const result = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!result.ok) {
-                    throw new Error(`API Error: ${result.status} ${result.statusText}`);
-                }
-
-                const data = await result.json();
-                const candidate = data.candidates?.[0];
-
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const quizText = candidate.content.parts[0].text;
-                    displayQuiz(quizText);
-                } else {
-                    displayError("Could not generate the quiz. Please try again.");
-                }
-
-            } catch (error) {
-                console.error('Error generating quiz:', error);
-                displayError(`An error occurred while generating the quiz: ${error.message}`);
-            } finally {
-                quizLoader.classList.add('hidden');
-                quizButton.disabled = false;
-                quizButton.textContent = 'Generate Practice Quiz (5 MCQs)';
-            }
-        }
-
-
-        /**
-         * Displays the AI's explanation response in the UI.
-         */
-        function displayResponse(text, sources) {
-            // Basic formatting for the explanation area
-            let formattedText = text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')       
-                .replace(/### (.*?)\n/g, '<h3>$1</h3>')     
-                .replace(/## (.*?)\n/g, '<h2>$1</h2>')       
-                .replace(/# (.*?)\n/g, '<h1>$1</h1>')        
-                .replace(/^- (.*?)\n/gm, '<ul><li>$1</li></ul>') 
-                .replace(/^\d+\. (.*?)\n/gm, '<ol><li>$1</li></ol>') 
-                .replace(/<\/ul>\n<ul>/g, '') 
-                .replace(/<\/ol>\n<ol>/g, '') 
-                .replace(/\n/g, '<br>');                     
-
-            responseArea.innerHTML = formattedText;
-            responseContainer.classList.remove('hidden');
-
-            // Populate sources
-            if (sources.length > 0) {
-                sourcesList.innerHTML = '';
-                sources.forEach(source => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="hover:underline">${source.title}</a>`;
-                    sourcesList.appendChild(li);
-                });
-                sourcesContainer.classList.remove('hidden');
-            } else {
-                sourcesContainer.classList.add('hidden');
-            }
-        }
-
-        /**
-         * Displays the generated quiz in the UI.
-         */
-        function displayQuiz(text) {
-             // Basic formatting for the quiz area to handle newlines as paragraphs/breaks
-             let formattedText = text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-                .replace(/\n/g, '<br><br>');
-
-            quizArea.innerHTML = formattedText;
-            quizContainer.classList.remove('hidden');
-        }
-
-        /**
-         * Displays an error message in the UI.
-         */
-        function displayError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.remove('hidden');
-        }
-    </script>
-</body>
-</html>
 <!-- CACHE BUSTER 20251101 -->
