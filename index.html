@@ -172,7 +172,7 @@
         const getExamDocRef = (uid) => doc(db, 'artifacts', appId, 'users', uid, 'settings', 'exam_preference');
 
         // Initialize Firebase and Authenticate
-        async function initializeAppAndAuth() {
+        
             // FIX: Bypass Firebase setup for GitHub Pages environment
             try {
                 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
